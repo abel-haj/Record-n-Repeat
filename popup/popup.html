@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Record-n-Repeat</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Record-n-Repeat</h1>
+      <p class="subtitle">Record and replay user actions</p>
+    </div>
+    
+    <div class="controls">
+      <div class="status-section">
+        <div class="status-indicator">
+          <div class="status-dot" id="statusDot"></div>
+          <span id="statusText">Ready</span>
+        </div>
+      </div>
+      
+      <div class="button-group">
+        <button id="recordBtn" class="btn btn-record">
+          <span class="btn-icon">●</span>
+          Start Recording
+        </button>
+        <button id="stopBtn" class="btn btn-stop" disabled>
+          <span class="btn-icon">■</span>
+          Stop Recording
+        </button>
+        <button id="playBtn" class="btn btn-play" disabled>
+          <span class="btn-icon">▶</span>
+          Replay Actions
+        </button>
+      </div>
+      
+      <div class="actions-section">
+        <div class="section-header">
+          <h3>Recorded Actions</h3>
+          <span id="actionCount" class="count">0</span>
+        </div>
+        <div id="actionsList" class="actions-list">
+          <p class="empty-state">No actions recorded yet</p>
+        </div>
+      </div>
+      
+      <div class="button-group">
+        <button id="clearBtn" class="btn btn-secondary">
+          Clear All
+        </button>
+        <button id="exportBtn" class="btn btn-secondary" disabled>
+          Export
+        </button>
+        <button id="importBtn" class="btn btn-secondary">
+          Import
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <input type="file" id="fileInput" accept=".json" style="display: none;">
+  <script src="popup.js"></script>
+</body>
+</html>
