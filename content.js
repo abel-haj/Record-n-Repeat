@@ -1,9 +1,245 @@
+// ===== EVENT RECORDING CONFIGURATION =====
+// Toggle these flags to control which events are recorded
+// Set to true to ENABLE recording, false to DISABLE
+const EVENT_CONFIG = {
+  click: true, // Mouse clicks
+  pointerdown: true, // Pointer/touch down events // some events require pointerdown events
+  keypress: false, // Key presses (disabled by default - can be noisy)
+  input: true, // Input field changes (typing)
+  change: true, // Form element changes (checkboxes, selects, etc.)
+  focus: false, // Element focus events (disabled by default)
+  blur: true, // Element blur events (disabled by default)
+};
+
+// Helper function to get current configuration summary
+const getEventConfigSummary = () => {
+  const active = Object.entries(EVENT_CONFIG)
+    .filter(([, enabled]) => enabled)
+    .map(([event]) => event);
+  const inactive = Object.entries(EVENT_CONFIG)
+    .filter(([, enabled]) => !enabled)
+    .map(([event]) => event);
+
+  return {
+    active,
+    inactive,
+    total: Object.keys(EVENT_CONFIG).length,
+  };
+};
+
+// Display active events for debugging
+const configSummary = getEventConfigSummary();
+console.log("🎯 Record-n-Repeat Event Configuration:", {
+  wouldBeActiveEvents: configSummary.active,
+  wouldBeInactiveEvents: configSummary.inactive,
+  summary: `${configSummary.active.length}/${configSummary.total} events enabled`,
+});
+// =========================================
+
 const ACTIONS = {
   RECORD: "START_RECORDING",
   STOP: "STOP_RECORDING",
   REPLAY: "REPLAY_RECORDING",
 };
 let backgroundPort = null;
+
+// ===== VISUAL FEEDBACK SYSTEM =====
+class FeedbackUI {
+  constructor() {
+    this.container = null;
+    this.recordingIndicator = null;
+    this.replayIndicator = null;
+  }
+
+  createContainer() {
+    if (this.container) return;
+
+    this.container = document.createElement("div");
+    this.container.id = "record-repeat-feedback";
+    this.container.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 2147483647;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    `;
+    document.body.appendChild(this.container);
+  }
+
+  showRecordingIndicator() {
+    this.createContainer();
+    this.hideReplayIndicator(); // Hide replay if active
+
+    if (this.recordingIndicator) return;
+
+    this.recordingIndicator = document.createElement("div");
+    this.recordingIndicator.innerHTML = `
+      <div style="
+        background: linear-gradient(135deg, #ff475794, #ff37424d);
+        color: white;
+        padding: 12px 16px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(255, 71, 87, 0.3);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        animation: pulse 2s infinite;
+      ">
+        <div style="
+          width: 8px;
+          height: 8px;
+          background: white;
+          border-radius: 50%;
+          animation: blink 1s infinite;
+        "></div>
+        REC
+      </div>
+      <style>
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.05); }
+        }
+        @keyframes blink {
+          0%, 50% { opacity: 1; }
+          51%, 100% { opacity: 0.3; }
+        }
+      </style>
+    `;
+
+    this.container.appendChild(this.recordingIndicator);
+  }
+
+  hideRecordingIndicator() {
+    if (this.recordingIndicator) {
+      this.recordingIndicator.remove();
+      this.recordingIndicator = null;
+    }
+  }
+
+  showReplayIndicator(currentAction = 0, totalActions = 0) {
+    this.createContainer();
+    this.hideRecordingIndicator(); // Hide recording if active
+
+    if (!this.replayIndicator) {
+      this.replayIndicator = document.createElement("div");
+      this.container.appendChild(this.replayIndicator);
+    }
+
+    const progressPercent =
+      totalActions > 0 ? (currentAction / totalActions) * 100 : 0;
+
+    this.replayIndicator.innerHTML = `
+      <div style="
+        background: linear-gradient(135deg, #3742fa9e, #3742fa45);
+        color: white;
+        padding: 12px 16px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(55, 66, 250, 0.3);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        min-width: 200px;
+      ">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+          "></div>
+          Replaying Actions
+        </div>
+        <div style="
+          background: rgba(255, 255, 255, 0.2);
+          border-radius: 4px;
+          height: 4px;
+          overflow: hidden;
+        ">
+          <div style="
+            background: white;
+            height: 100%;
+            width: ${progressPercent}%;
+            transition: width 0.3s ease;
+          "></div>
+        </div>
+        <div style="font-size: 12px; opacity: 0.9;">
+          ${currentAction} / ${totalActions}
+        </div>
+      </div>
+      <style>
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      </style>
+    `;
+  }
+
+  hideReplayIndicator() {
+    if (this.replayIndicator) {
+      this.replayIndicator.remove();
+      this.replayIndicator = null;
+    }
+  }
+
+  showActionHighlight(element) {
+    if (!element) return;
+
+    const highlight = document.createElement("div");
+    const rect = element.getBoundingClientRect();
+
+    highlight.style.cssText = `
+      position: fixed;
+      left: ${rect.left}px;
+      top: ${rect.top}px;
+      width: ${rect.width}px;
+      height: ${rect.height}px;
+      border: 2px solid #3742fa;
+      border-radius: 4px;
+      background: rgba(55, 66, 250, 0.1);
+      pointer-events: none;
+      z-index: 2147483646;
+      animation: highlightPulse 0.6s ease-out;
+    `;
+
+    const style = document.createElement("style");
+    style.textContent = `
+      @keyframes highlightPulse {
+        0% { transform: scale(1.1); opacity: 0; }
+        50% { transform: scale(1); opacity: 1; }
+        100% { transform: scale(1); opacity: 0; }
+      }
+    `;
+    document.head.appendChild(style);
+    document.body.appendChild(highlight);
+
+    setTimeout(() => {
+      highlight.remove();
+      style.remove();
+    }, 600);
+  }
+
+  cleanup() {
+    if (this.container) {
+      this.container.remove();
+      this.container = null;
+      this.recordingIndicator = null;
+      this.replayIndicator = null;
+    }
+  }
+}
+
+const feedbackUI = new FeedbackUI();
+// =====================================
 
 // Main
 (() => {
@@ -22,19 +258,49 @@ let backgroundPort = null;
           name: "content-background",
         });
 
-        // bind listeners
-        // document.addEventListener("focus", onDocFocus, true);
-        // document.addEventListener("blur", onDocBlur, true);
-        document.addEventListener("click", onDocClick, true);
-        document.addEventListener(
-          "pointerdown",
-          onDocPointerDown,
-          true
-        );
-        document.addEventListener("keypress", onKeyboardPress, true);
-        document.addEventListener("change", onDocChange, true);
-        document.addEventListener("input", onInput, true);
-        console.log("LISTENING...");
+        // bind listeners based on configuration
+        const activeEvents = [];
+        if (EVENT_CONFIG.focus) {
+          document.addEventListener("focus", onDocFocus, true);
+          activeEvents.push("focus");
+        }
+        if (EVENT_CONFIG.blur) {
+          document.addEventListener("blur", onDocBlur, true);
+          activeEvents.push("blur");
+        }
+        if (EVENT_CONFIG.click) {
+          document.addEventListener("click", onDocClick, true);
+          activeEvents.push("click");
+        }
+        if (EVENT_CONFIG.pointerdown) {
+          document.addEventListener(
+            "pointerdown",
+            onDocPointerDown,
+            true
+          );
+          activeEvents.push("pointerdown");
+        }
+        if (EVENT_CONFIG.keypress) {
+          document.addEventListener(
+            "keypress",
+            onKeyboardPress,
+            true
+          );
+          activeEvents.push("keypress");
+        }
+        if (EVENT_CONFIG.change) {
+          document.addEventListener("change", onDocChange, true);
+          activeEvents.push("change");
+        }
+        if (EVENT_CONFIG.input) {
+          document.addEventListener("input", onInput, true);
+          activeEvents.push("input");
+        }
+
+        console.log("🎯 LISTENING FOR EVENTS:", activeEvents);
+
+        // Show recording feedback
+        feedbackUI.showRecordingIndicator();
       }
 
       if (request.action === ACTIONS.STOP) {
@@ -45,22 +311,49 @@ let backgroundPort = null;
           backgroundPort = null;
         }
 
-        // unbind listeners
-        // document.removeEventListener("focus", onDocFocus, true);
-        // document.removeEventListener("blur", onDocBlur, true);
-        document.removeEventListener("click", onDocClick, true);
-        document.removeEventListener(
-          "pointerdown",
-          onDocPointerDown,
-          true
-        );
-        document.removeEventListener(
-          "keypress",
-          onKeyboardPress,
-          true
-        );
-        document.removeEventListener("change", onDocChange, true);
-        console.log("STOPPED LISTENING!");
+        // unbind listeners based on configuration
+        const removedEvents = [];
+        if (EVENT_CONFIG.focus) {
+          document.removeEventListener("focus", onDocFocus, true);
+          removedEvents.push("focus");
+        }
+        if (EVENT_CONFIG.blur) {
+          document.removeEventListener("blur", onDocBlur, true);
+          removedEvents.push("blur");
+        }
+        if (EVENT_CONFIG.click) {
+          document.removeEventListener("click", onDocClick, true);
+          removedEvents.push("click");
+        }
+        if (EVENT_CONFIG.pointerdown) {
+          document.removeEventListener(
+            "pointerdown",
+            onDocPointerDown,
+            true
+          );
+          removedEvents.push("pointerdown");
+        }
+        if (EVENT_CONFIG.keypress) {
+          document.removeEventListener(
+            "keypress",
+            onKeyboardPress,
+            true
+          );
+          removedEvents.push("keypress");
+        }
+        if (EVENT_CONFIG.change) {
+          document.removeEventListener("change", onDocChange, true);
+          removedEvents.push("change");
+        }
+        if (EVENT_CONFIG.input) {
+          document.removeEventListener("input", onInput, true);
+          removedEvents.push("input");
+        }
+
+        console.log("🛑 STOPPED LISTENING FOR:", removedEvents);
+
+        // Hide recording feedback
+        feedbackUI.hideRecordingIndicator();
       }
 
       if (request.action === ACTIONS.REPLAY) {
@@ -70,10 +363,19 @@ let backgroundPort = null;
           recordedActions,
         });
 
+        // Show replay feedback
+        feedbackUI.showReplayIndicator(0, recordedActions.length);
+
         for (let i = 0; i < recordedActions.length; i++) {
           const action = recordedActions[i];
           const element = document.querySelector(
             action.details.selector
+          );
+
+          // Update replay progress
+          feedbackUI.showReplayIndicator(
+            i + 1,
+            recordedActions.length
           );
 
           if (!element) {
@@ -83,6 +385,9 @@ let backgroundPort = null;
             );
             continue;
           }
+
+          // Highlight the element being acted upon
+          feedbackUI.showActionHighlight(element);
 
           if (action.type === "click") {
             console.log(
@@ -168,6 +473,9 @@ let backgroundPort = null;
             recordedActions.length +
             " ACTION(S)"
         );
+
+        // Hide replay feedback
+        feedbackUI.hideReplayIndicator();
 
         // Send completion message to popup
         chrome.runtime.sendMessage({ action: "REPLAY_COMPLETE" });
