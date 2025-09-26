@@ -1,5 +1,12 @@
+const ACTIONS = {
+  RECORD: "START_RECORDING",
+  STOP: "STOP_RECORDING",
+  REPLAY: "REPLAY_RECORDING",
+};
+
 (() => {
   let isRecording = false;
+  let isPlaying = false;
   let recordedActions = [];
 
   // Hide UI initially to prevent showing wrong state
@@ -61,10 +68,24 @@
       recordBtn.disabled = true;
       stopBtn.disabled = false;
       if (playBtn) playBtn.disabled = true;
+    } else if (isPlaying) {
+      recordBtn.disabled = true;
+      stopBtn.disabled = true;
+      if (playBtn) {
+        playBtn.disabled = true;
+        playBtn.innerHTML =
+          '<span class="btn-icon spinning">⟳</span>Replaying...';
+        playBtn.classList.add("btn-playing");
+      }
     } else {
       recordBtn.disabled = false;
       stopBtn.disabled = true;
-      if (playBtn) playBtn.disabled = recordedActions.length === 0;
+      if (playBtn) {
+        playBtn.disabled = recordedActions.length === 0;
+        playBtn.innerHTML =
+          '<span class="btn-icon">▶</span>Replay Actions';
+        playBtn.classList.remove("btn-playing");
+      }
     }
 
     // Update action count
@@ -86,19 +107,58 @@
         '<p class="empty-state">No actions recorded yet</p>';
     } else {
       actionsList.innerHTML = recordedActions
-        .map(
-          (action, index) => `
-        <div class="action-item">
-          <div>
-            <div class="action-type">${action.type}</div>
-            <div class="action-details">${action.details || ""}</div>
+        .map((action, index) => {
+          let details = "";
+          if (action.type === "keypress") {
+            details = `<div class="action-details" title="Key: ${
+              action.details.key || ""
+            }">
+            Key pressed: <b>${action.details.key || ""}</b>
+            <br/><span title="${action.details.selector || ""}">
+            ${
+              action.details.selector &&
+              action.details.selector.length > 30
+                ? action.details.selector.slice(0, 30) + "…"
+                : action.details.selector || ""
+            }</span>
+          </div>`;
+          } else if (action.type === "change") {
+            details = `<div class="action-details" title="Value: ${
+              action.details.value || ""
+            }">
+            Value changed to: <b>${
+              action.details.value || ""
+            }</b><br/><span title="${action.details.selector || ""}">
+            ${
+              action.details.selector &&
+              action.details.selector.length > 30
+                ? action.details.selector.slice(0, 30) + "…"
+                : action.details.selector || ""
+            }</span>
+          </div>`;
+          } else {
+            details = `<div class="action-details" title="${
+              action.details.selector || ""
+            }">
+            ${
+              action.details.selector &&
+              action.details.selector.length > 30
+                ? action.details.selector.slice(0, 30) + "…"
+                : action.details.selector || ""
+            }
+          </div>`;
+          }
+          return `
+          <div class="action-item">
+            <div>
+          <div class="action-type">${action.type} <span style=""></span></div>
+          ${details}
+            </div>
+            <div class="action-timestamp">
+            ${action.details.timestamp}</div>
           </div>
-          <div class="action-timestamp">${new Date(
-            action.timestamp
-          ).toLocaleTimeString()}</div>
-        </div>
-      `
-        )
+        `;
+        })
         .join("");
     }
   }
@@ -109,7 +169,7 @@
   // retrieve state
   chrome.storage.local.get(
     ["isRecording", "recordedActions"],
-    (result) => {
+    async (result) => {
       // Update local state from storage
       if (result.isRecording !== undefined) {
         isRecording = result.isRecording;
@@ -129,7 +189,7 @@
 
   document
     .getElementById("recordBtn")
-    .addEventListener("click", () => {
+    .addEventListener("click", async () => {
       console.log("TRYING TO RECORD");
 
       // flag as recording
@@ -139,26 +199,112 @@
       recordedActions = [];
       chrome.storage.local.set({ isRecording, recordedActions });
 
-      // bind events to listeners
+      // send signal to listen for actions
+      const [activeTab] = await chrome.tabs.query({
+        active: true,
+        currentWindow: true,
+      });
+      // console.log('QUERY FROM CHROME API', activeTab);
+      chrome.runtime.sendMessage({
+        tab: activeTab.id,
+        action: ACTIONS.RECORD,
+      });
 
       // update UI
       updateUI();
     });
 
-  document.getElementById("stopBtn").addEventListener("click", () => {
-    console.log("STOPPING RECORD");
+  document
+    .getElementById("stopBtn")
+    .addEventListener("click", async () => {
+      console.log("STOPPING RECORD");
 
-    // flag as not recording
-    isRecording = false;
+      // flag as not recording
+      isRecording = false;
 
-    // update state
-    chrome.storage.local.set({ isRecording, recordedActions });
+      // update state
+      chrome.storage.local.set({ isRecording, recordedActions });
 
-    // unbind events from listeners
+      // send signal to stop listening for actions
+      const [activeTab] = await chrome.tabs.query({
+        active: true,
+        currentWindow: true,
+      });
+      console.log(
+        "CONTENT SCRIPT OF " +
+          activeTab.id +
+          " SHOULD START LISTENING"
+      );
+      chrome.runtime.sendMessage({
+        tab: activeTab.id,
+        action: ACTIONS.STOP,
+      });
 
-    // update UI
-    updateUI();
-  });
+      // update UI
+      updateUI();
+    });
+
+  document
+    .getElementById("playBtn")
+    .addEventListener("click", async () => {
+      console.log("SIGNAL TO PLAY RECORDED ACTIONS");
+
+      // Set playing state
+      isPlaying = true;
+      updateUI();
+
+      // send signal to play recorded actions
+      const [activeTab] = await chrome.tabs.query({
+        active: true,
+        currentWindow: true,
+      });
+
+      try {
+        chrome.tabs
+          .sendMessage(activeTab.id, {
+            action: ACTIONS.REPLAY,
+            replay: recordedActions,
+          })
+          .then((response) => {
+            console.log("REPLAY RESPONSE:", response);
+
+            // Reset playing state after replay completes
+            setTimeout(() => {
+              isPlaying = false;
+              updateUI();
+            }, 1000); // Give some time for the replay to visually complete
+          });
+      } catch (error) {
+        console.error("Replay failed:", error);
+        // Reset playing state on error
+        isPlaying = false;
+        updateUI();
+      }
+    });
+
+  document
+    .getElementById("clearBtn")
+    .addEventListener("click", async () => {
+      recordedActions = [];
+
+      chrome.storage.local.set({ recordedActions });
+      updateActionsList();
+    });
+
+  chrome.runtime.onMessage.addListener(
+    (message, sender, sendResponse) => {
+      if (message.action === ACTIONS.STOP) {
+        console.log("RECORDING STOPPED MESSAGE RECEIVED");
+        isRecording = false;
+        chrome.storage.local.set({ isRecording });
+        updateUI();
+      } else if (message.action === "REPLAY_COMPLETE") {
+        console.log("REPLAY COMPLETED MESSAGE RECEIVED");
+        isPlaying = false;
+        updateUI();
+      }
+    }
+  );
 
   // Add clear button functionality
   const clearBtn = document.getElementById("clearBtn");

@@ -173,6 +173,15 @@ body {
   background-color: #218838;
 }
 
+.btn-play.btn-playing {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+.btn-play.btn-playing:disabled {
+  opacity: 1;
+}
+
 .btn-secondary {
   background-color: #6c757d;
   color: white;
@@ -186,6 +195,10 @@ body {
 
 .btn-icon {
   font-size: 16px;
+}
+
+.btn-icon.spinning {
+  animation: spin 1s linear infinite;
 }
 
 .actions-section {
