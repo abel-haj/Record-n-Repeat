@@ -291,6 +291,15 @@ const ACTIONS = {
       updateActionsList();
     });
 
+  document
+    .getElementById("testBtn")
+    .addEventListener("click", async () => {
+      console.log("SENDING SIGNAL FOR TESTING TABS");
+      const response = await chrome.runtime.sendMessage({
+        action: "INFO_TABS",
+      });
+    });
+
   chrome.runtime.onMessage.addListener(
     (message, sender, sendResponse) => {
       if (message.action === ACTIONS.STOP) {

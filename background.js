@@ -1,6 +1,7 @@
 const ACTIONS = {
   RECORD: "START_RECORDING",
   STOP: "STOP_RECORDING",
+  REPLAY: "REPLAY_RECORDING",
 };
 
 (() => {
@@ -21,7 +22,6 @@ const ACTIONS = {
   // Incoming from extension popup
   chrome.runtime.onMessage.addListener(
     (message, sender, sendResponse) => {
-      if (!message.action || !message.tab) return;
       console.log(
         "Message received in background.js for tab:",
         message.tab,
@@ -29,9 +29,11 @@ const ACTIONS = {
         message.action
       );
 
+      if (!message.action) return;
+
       // Send signal to content script
       // to start listening for and sending actions
-      if (message.action === ACTIONS.RECORD) {
+      if (message.action === ACTIONS.RECORD && message.tab) {
         chrome.tabs.sendMessage(message.tab, {
           action: ACTIONS.RECORD,
         });
@@ -39,10 +41,25 @@ const ACTIONS = {
 
       // Send signal to content script
       // to stop listening and cleaning up
-      if (message.action === ACTIONS.STOP) {
+      if (message.action === ACTIONS.STOP && message.tab) {
         chrome.tabs.sendMessage(message.tab, {
           action: ACTIONS.STOP,
         });
+      }
+
+      if (message.action === "INFO_TABS") {
+        console.log("STARTING TABS INSPECTION, RAISE YOUR HANDS!");
+
+        (async () => {
+          const tabs = await chrome.tabs.query({});
+          console.log("ALL TABS INFO:", tabs);
+
+          const currentTab = await chrome.tabs.query({
+            active: true,
+            currentWindow: true,
+          });
+          console.log("DETAILS ABOUT CURRENT TAB:", currentTab);
+        })();
       }
     }
   );

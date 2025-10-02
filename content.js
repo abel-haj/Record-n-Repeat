@@ -5,10 +5,10 @@ const EVENT_CONFIG = {
   click: true, // Mouse clicks
   pointerdown: true, // Pointer/touch down events // some events require pointerdown events
   keypress: false, // Key presses (disabled by default - can be noisy)
-  input: true, // Input field changes (typing)
-  change: true, // Form element changes (checkboxes, selects, etc.)
+  input: false, // Input field changes (typing)
+  change: false, // Form element changes (checkboxes, selects, etc.)
   focus: false, // Element focus events (disabled by default)
-  blur: true, // Element blur events (disabled by default)
+  blur: false, // Element blur events (disabled by default)
 };
 
 // Helper function to get current configuration summary
@@ -258,44 +258,40 @@ const feedbackUI = new FeedbackUI();
           name: "content-background",
         });
 
-        // bind listeners based on configuration
+        // bind listeners to actionable elements based on configuration
+        const actionableElements = document.querySelectorAll(ACTIONABLE_SEL);
         const activeEvents = [];
-        if (EVENT_CONFIG.focus) {
-          document.addEventListener("focus", onDocFocus, true);
-          activeEvents.push("focus");
-        }
-        if (EVENT_CONFIG.blur) {
-          document.addEventListener("blur", onDocBlur, true);
-          activeEvents.push("blur");
-        }
-        if (EVENT_CONFIG.click) {
-          document.addEventListener("click", onDocClick, true);
-          activeEvents.push("click");
-        }
-        if (EVENT_CONFIG.pointerdown) {
-          document.addEventListener(
-            "pointerdown",
-            onDocPointerDown,
-            true
-          );
-          activeEvents.push("pointerdown");
-        }
-        if (EVENT_CONFIG.keypress) {
-          document.addEventListener(
-            "keypress",
-            onKeyboardPress,
-            true
-          );
-          activeEvents.push("keypress");
-        }
-        if (EVENT_CONFIG.change) {
-          document.addEventListener("change", onDocChange, true);
-          activeEvents.push("change");
-        }
-        if (EVENT_CONFIG.input) {
-          document.addEventListener("input", onInput, true);
-          activeEvents.push("input");
-        }
+        
+        actionableElements.forEach(element => {
+          if (EVENT_CONFIG.focus) {
+            element.addEventListener("focus", onDocFocus);
+            if (!activeEvents.includes("focus")) activeEvents.push("focus");
+          }
+          if (EVENT_CONFIG.blur) {
+            element.addEventListener("blur", onDocBlur);
+            if (!activeEvents.includes("blur")) activeEvents.push("blur");
+          }
+          if (EVENT_CONFIG.click) {
+            element.addEventListener("click", onDocClick);
+            if (!activeEvents.includes("click")) activeEvents.push("click");
+          }
+          if (EVENT_CONFIG.pointerdown) {
+            element.addEventListener("pointerdown", onDocPointerDown);
+            if (!activeEvents.includes("pointerdown")) activeEvents.push("pointerdown");
+          }
+          if (EVENT_CONFIG.keypress) {
+            element.addEventListener("keypress", onKeyboardPress);
+            if (!activeEvents.includes("keypress")) activeEvents.push("keypress");
+          }
+          if (EVENT_CONFIG.change) {
+            element.addEventListener("change", onDocChange);
+            if (!activeEvents.includes("change")) activeEvents.push("change");
+          }
+          if (EVENT_CONFIG.input) {
+            element.addEventListener("input", onInput);
+            if (!activeEvents.includes("input")) activeEvents.push("input");
+          }
+        });
 
         console.log("🎯 LISTENING FOR EVENTS:", activeEvents);
 
@@ -311,44 +307,40 @@ const feedbackUI = new FeedbackUI();
           backgroundPort = null;
         }
 
-        // unbind listeners based on configuration
+        // unbind listeners from actionable elements based on configuration
+        const actionableElements = document.querySelectorAll(ACTIONABLE_SEL);
         const removedEvents = [];
-        if (EVENT_CONFIG.focus) {
-          document.removeEventListener("focus", onDocFocus, true);
-          removedEvents.push("focus");
-        }
-        if (EVENT_CONFIG.blur) {
-          document.removeEventListener("blur", onDocBlur, true);
-          removedEvents.push("blur");
-        }
-        if (EVENT_CONFIG.click) {
-          document.removeEventListener("click", onDocClick, true);
-          removedEvents.push("click");
-        }
-        if (EVENT_CONFIG.pointerdown) {
-          document.removeEventListener(
-            "pointerdown",
-            onDocPointerDown,
-            true
-          );
-          removedEvents.push("pointerdown");
-        }
-        if (EVENT_CONFIG.keypress) {
-          document.removeEventListener(
-            "keypress",
-            onKeyboardPress,
-            true
-          );
-          removedEvents.push("keypress");
-        }
-        if (EVENT_CONFIG.change) {
-          document.removeEventListener("change", onDocChange, true);
-          removedEvents.push("change");
-        }
-        if (EVENT_CONFIG.input) {
-          document.removeEventListener("input", onInput, true);
-          removedEvents.push("input");
-        }
+        
+        actionableElements.forEach(element => {
+          if (EVENT_CONFIG.focus) {
+            element.removeEventListener("focus", onDocFocus);
+            if (!removedEvents.includes("focus")) removedEvents.push("focus");
+          }
+          if (EVENT_CONFIG.blur) {
+            element.removeEventListener("blur", onDocBlur);
+            if (!removedEvents.includes("blur")) removedEvents.push("blur");
+          }
+          if (EVENT_CONFIG.click) {
+            element.removeEventListener("click", onDocClick);
+            if (!removedEvents.includes("click")) removedEvents.push("click");
+          }
+          if (EVENT_CONFIG.pointerdown) {
+            element.removeEventListener("pointerdown", onDocPointerDown);
+            if (!removedEvents.includes("pointerdown")) removedEvents.push("pointerdown");
+          }
+          if (EVENT_CONFIG.keypress) {
+            element.removeEventListener("keypress", onKeyboardPress);
+            if (!removedEvents.includes("keypress")) removedEvents.push("keypress");
+          }
+          if (EVENT_CONFIG.change) {
+            element.removeEventListener("change", onDocChange);
+            if (!removedEvents.includes("change")) removedEvents.push("change");
+          }
+          if (EVENT_CONFIG.input) {
+            element.removeEventListener("input", onInput);
+            if (!removedEvents.includes("input")) removedEvents.push("input");
+          }
+        });
 
         console.log("🛑 STOPPED LISTENING FOR:", removedEvents);
 
@@ -379,11 +371,11 @@ const feedbackUI = new FeedbackUI();
           );
 
           if (!element) {
-            console.warn(
-              "Element not found for selector:",
-              action.details.selector
-            );
-            continue;
+            // console.warn(
+            //   "Element not found for selector:",
+            //   action.details.selector
+            // );
+            // continue;
           }
 
           // Highlight the element being acted upon
