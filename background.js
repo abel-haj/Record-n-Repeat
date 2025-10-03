@@ -48,18 +48,43 @@ const ACTIONS = {
       }
 
       if (message.action === "INFO_TABS") {
-        console.log("STARTING TABS INSPECTION, RAISE YOUR HANDS!");
+        console.log("🚀 STARTING TABS INSPECTION, RAISE YOUR HANDS!");
 
         (async () => {
+          console.log("🔍 Step 1: Starting tab query...");
           const tabs = await chrome.tabs.query({});
-          console.log("ALL TABS INFO:", tabs);
+          console.log("📋 Step 2: ALL TABS INFO:", tabs);
 
+          console.log("🎯 Step 3: Querying current tab...");
           const currentTab = await chrome.tabs.query({
             active: true,
             currentWindow: true,
           });
-          console.log("DETAILS ABOUT CURRENT TAB:", currentTab);
+          console.log("📌 Step 4: DETAILS ABOUT CURRENT TAB:", currentTab);
+
+          console.log("📤 Step 5: Sending tab data to popup...");
+          // Send tab info back to popup
+          if (sender.tab) {
+            console.log("📨 Sending via runtime message (from content script)");
+            // If called from content script, send to popup
+            chrome.runtime.sendMessage({
+              action: "TABS_INFO_RESPONSE",
+              allTabs: tabs,
+              currentTab: currentTab[0],
+            });
+          } else {
+            console.log("📬 Sending via sendResponse (from popup)");
+            // If called from popup, respond directly
+            sendResponse({
+              success: true,
+              allTabs: tabs,
+              currentTab: currentTab[0],
+            });
+          }
+          console.log("✅ Step 6: Tab data sent successfully!");
         })();
+        
+        return true; // Keep message channel open for async response
       }
     }
   );

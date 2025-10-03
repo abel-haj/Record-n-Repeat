@@ -4,6 +4,59 @@ const ACTIONS = {
   REPLAY: "REPLAY_RECORDING",
 };
 
+// Update tabs table
+function updateTabsTable(allTabs, currentTab) {
+  console.log("🏁 updateTabsTable called with:", {
+    allTabs,
+    currentTab,
+  });
+
+  const tabsTableBody = document.getElementById("tabsTableBody");
+  console.log("🔍 Found tabsTableBody element:", !!tabsTableBody);
+
+  if (!tabsTableBody) {
+    console.error("❌ tabsTableBody element not found!");
+    return;
+  }
+
+  if (!allTabs || allTabs.length === 0) {
+    console.log("📝 No tabs found, showing empty state");
+    tabsTableBody.innerHTML =
+      '<tr><td colspan="3" class="empty-state">No tabs found</td></tr>';
+    return;
+  }
+
+  console.log(`📊 Processing ${allTabs.length} tabs...`);
+
+  console.log(`📊 Processing ${allTabs.length} tabs...`);
+
+  tabsTableBody.innerHTML = allTabs
+    .map((tab) => {
+      const isCurrentTab = currentTab && tab.id === currentTab.id;
+      const title =
+        tab.title && tab.title.length > 25
+          ? tab.title.slice(0, 25) + "..."
+          : tab.title || "Untitled";
+      const url =
+        tab.url && tab.url.length > 30
+          ? tab.url.slice(0, 30) + "..."
+          : tab.url || "";
+
+      return `
+          <tr class="${isCurrentTab ? "current-tab" : ""}">
+            <td class="tab-id">${tab.id}</td>
+            <td class="tab-title" title="${
+              tab.title || ""
+            }">${title}</td>
+            <td class="tab-url" title="${tab.url || ""}">${url}</td>
+          </tr>
+        `;
+    })
+    .join("");
+
+  console.log("✨ Tabs table HTML updated successfully!");
+}
+
 (() => {
   let isRecording = false;
   let isPlaying = false;
@@ -187,6 +240,8 @@ const ACTIONS = {
     }
   );
 
+  testButtonClickHandler();
+
   document
     .getElementById("recordBtn")
     .addEventListener("click", async () => {
@@ -293,24 +348,53 @@ const ACTIONS = {
 
   document
     .getElementById("testBtn")
-    .addEventListener("click", async () => {
-      console.log("SENDING SIGNAL FOR TESTING TABS");
+    .addEventListener("click", testButtonClickHandler);
+
+  const testButtonClickHandler = async () => {
+    console.log("🔵 Step A: Test button clicked!");
+    console.log("📡 Step B: SENDING SIGNAL FOR TESTING TABS");
+
+    try {
       const response = await chrome.runtime.sendMessage({
         action: "INFO_TABS",
       });
-    });
+      console.log(
+        "📥 Step C: Received response from background:",
+        response
+      );
+
+      if (response && response.success) {
+        console.log(
+          "✅ Step D: Response successful, updating table..."
+        );
+        updateTabsTable(response.allTabs, response.currentTab);
+        console.log("🎨 Step E: Table updated successfully!");
+      } else {
+        console.log("❌ Step D: No valid response received");
+      }
+    } catch (error) {
+      console.error("💥 Error in test button:", error);
+    }
+  };
 
   chrome.runtime.onMessage.addListener(
     (message, sender, sendResponse) => {
+      console.log("📨 Popup received message:", message);
+
       if (message.action === ACTIONS.STOP) {
-        console.log("RECORDING STOPPED MESSAGE RECEIVED");
+        console.log("🛑 RECORDING STOPPED MESSAGE RECEIVED");
         isRecording = false;
         chrome.storage.local.set({ isRecording });
         updateUI();
       } else if (message.action === "REPLAY_COMPLETE") {
-        console.log("REPLAY COMPLETED MESSAGE RECEIVED");
+        console.log("🎬 REPLAY COMPLETED MESSAGE RECEIVED");
         isPlaying = false;
         updateUI();
+      } else if (message.action === "TABS_INFO_RESPONSE") {
+        console.log("📋 TABS INFO RESPONSE RECEIVED:", message);
+        console.log("🎨 Updating tabs table...");
+        updateTabsTable(message.allTabs, message.currentTab);
+        console.log("✅ Tabs table updated!");
       }
     }
   );
