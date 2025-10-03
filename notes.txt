@@ -1,0 +1,5 @@
+ABOUT EXTENSIONS V3
+
+Background/Service Worker: JS file that acts as an event handler, that runs separately from the main browser thread. It does not have access to the content of the web page so it communicates using api
+
+Content Script: Utilities + Functionalities of the extension in the web page (DOM Manipulation, data  validation, ...)
