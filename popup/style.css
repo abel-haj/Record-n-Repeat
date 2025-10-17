@@ -107,13 +107,23 @@ body {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes fadeIn {
-  0% { opacity: 0; transform: translateY(10px); }
-  100% { opacity: 1; transform: translateY(0); }
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .loading-state.hidden {
@@ -281,6 +291,11 @@ body {
   border-radius: 12px;
   border: 2px solid #ffc1e3;
   box-shadow: 0 4px 12px rgba(255, 182, 193, 0.3);
+  max-height: calc(16px + 30px + 55.5px * 6);
+}
+.table-responsive {
+  /* width: 100%; */
+  overflow: auto;
 }
 
 .tabs-info-section h3 {
@@ -300,6 +315,7 @@ body {
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(255, 182, 193, 0.2);
   font-size: 12px;
+  overflow: hidden;
 }
 
 .tabs-table thead {
@@ -343,15 +359,17 @@ body {
   color: #e91e63;
 }
 
+.tab-status {
+  text-align: center;
+}
+
 .tab-title {
   max-width: 150px;
-  word-break: break-word;
   font-weight: 500;
 }
 
 .tab-url {
   max-width: 170px;
-  word-break: break-all;
   font-size: 10px;
   color: #6c757d;
 }
