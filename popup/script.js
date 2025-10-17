@@ -12,7 +12,12 @@ function updateTabsTable(allTabs, currentTab) {
   });
 
   const tabsTableBody = document.getElementById("tabsTableBody");
+  const tabsTableSection = document.querySelector(
+    ".tabs-info-section"
+  );
+
   console.log("🔍 Found tabsTableBody element:", !!tabsTableBody);
+  console.log("🔍 Found tabsTableHead element:", !!tabsTableSection);
 
   if (!tabsTableBody) {
     console.error("❌ tabsTableBody element not found!");
@@ -20,7 +25,10 @@ function updateTabsTable(allTabs, currentTab) {
   }
 
   if (!allTabs || allTabs.length === 0) {
-    console.log("📝 No tabs found, showing empty state");
+    console.log(
+      "📝 No tabs found, hiding table head and showing empty state"
+    );
+    if (tabsTableSection) tabsTableSection.style.display = "none";
     tabsTableBody.innerHTML =
       '<tr><td colspan="3" class="empty-state">No tabs found</td></tr>';
     return;
@@ -28,23 +36,61 @@ function updateTabsTable(allTabs, currentTab) {
 
   console.log(`📊 Processing ${allTabs.length} tabs...`);
 
-  console.log(`📊 Processing ${allTabs.length} tabs...`);
+  // Show table head when there are tabs
+  if (tabsTableSection) {
+    tabsTableSection.style.display = "block";
+    console.log("👁️ Table head made visible");
+  }
 
   tabsTableBody.innerHTML = allTabs
     .map((tab) => {
       const isCurrentTab = currentTab && tab.id === currentTab.id;
+      const tabId =
+        typeof tab.id === "number"
+          ? tab.id.toString().length > 4
+            ? tab.id.toString().slice(0, 4) + "..."
+            : tab.id.toString()
+          : tab.id || "???";
       const title =
         tab.title && tab.title.length > 25
           ? tab.title.slice(0, 25) + "..."
           : tab.title || "Untitled";
-      const url =
-        tab.url && tab.url.length > 30
-          ? tab.url.slice(0, 30) + "..."
-          : tab.url || "";
+      const url = (() => {
+        try {
+          if (tab.url) {
+            const { hostname } = new URL(tab.url);
+            return hostname;
+          }
+        } catch (e) {}
+        return tab.url || "";
+      })();
+      // Determine tab type
+      const tabType = tab.url
+        ? '<span title="Normal Tab" class="tab-type-icon">🗂️</span>'
+        : '<span title="Special Tab" class="tab-type-icon">⭐</span>';
 
-      return `
+      // Determine tab status icon
+      let statusIcon = "";
+      switch (tab.status) {
+        case "loading":
+          statusIcon =
+            '<span title="Loading" class="tab-status-icon">⏳</span>';
+          break;
+        case "complete":
+          statusIcon =
+            '<span title="Complete" class="tab-status-icon">✅</span>';
+          break;
+        default:
+          statusIcon =
+            '<span title="Unknown" class="tab-status-icon">❔</span>';
+      }
+
+      if (tab.url)
+        return `
           <tr class="${isCurrentTab ? "current-tab" : ""}">
-            <td class="tab-id">${tab.id}</td>
+            <!--<td class="tab-type">${tabType}</td>-- IGNORE --->
+            <td class="tab-status">${statusIcon}</td>
+            <td class="tab-id">${tabId}</td>
             <td class="tab-title" title="${
               tab.title || ""
             }">${title}</td>
@@ -216,6 +262,33 @@ function updateTabsTable(allTabs, currentTab) {
     }
   }
 
+  const testButtonClickHandler = async () => {
+    console.log("🔵 Step A: Test button clicked!");
+    console.log("📡 Step B: SENDING SIGNAL FOR TESTING TABS");
+
+    try {
+      const response = await chrome.runtime.sendMessage({
+        action: "INFO_TABS",
+      });
+      console.log(
+        "📥 Step C: Received response from background:",
+        response
+      );
+
+      if (response && response.success) {
+        console.log(
+          "✅ Step D: Response successful, updating table..."
+        );
+        updateTabsTable(response.allTabs, response.currentTab);
+        console.log("🎨 Step E: Table updated successfully!");
+      } else {
+        console.log("❌ Step D: No valid response received");
+      }
+    } catch (error) {
+      console.error("💥 Error in test button:", error);
+    }
+  };
+
   // Initialize UI - hide it first
   hideUI();
 
@@ -239,8 +312,6 @@ function updateTabsTable(allTabs, currentTab) {
       showUI();
     }
   );
-
-  testButtonClickHandler();
 
   document
     .getElementById("recordBtn")
@@ -350,32 +421,7 @@ function updateTabsTable(allTabs, currentTab) {
     .getElementById("testBtn")
     .addEventListener("click", testButtonClickHandler);
 
-  const testButtonClickHandler = async () => {
-    console.log("🔵 Step A: Test button clicked!");
-    console.log("📡 Step B: SENDING SIGNAL FOR TESTING TABS");
-
-    try {
-      const response = await chrome.runtime.sendMessage({
-        action: "INFO_TABS",
-      });
-      console.log(
-        "📥 Step C: Received response from background:",
-        response
-      );
-
-      if (response && response.success) {
-        console.log(
-          "✅ Step D: Response successful, updating table..."
-        );
-        updateTabsTable(response.allTabs, response.currentTab);
-        console.log("🎨 Step E: Table updated successfully!");
-      } else {
-        console.log("❌ Step D: No valid response received");
-      }
-    } catch (error) {
-      console.error("💥 Error in test button:", error);
-    }
-  };
+  testButtonClickHandler();
 
   chrome.runtime.onMessage.addListener(
     (message, sender, sendResponse) => {
