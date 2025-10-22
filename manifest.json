@@ -3,7 +3,22 @@
   "name": "Record-n-Repeat (FOR NOW)",
   "version": "0.1.1",
   "description": "Record and replay user actions on a web page.",
-  "action": { "default_popup": "popup/index.html" },
+  "action": {
+    "default_popup": "popup/index.html",
+    "default_title": "Record-n-Repeat",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
   "permissions": ["storage"],
   "host_permissions": ["<all_urls>"],
   "background": { "service_worker": "background.js" },
