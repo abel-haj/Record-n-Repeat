@@ -80,6 +80,26 @@ function updateTabsTable(allTabs, currentTab) {
           statusIcon =
             '<span title="Complete" class="tab-status-icon">✅</span>';
           break;
+        case "unloaded":
+          statusIcon =
+            '<span title="Unloaded" class="tab-status-icon">💤</span>';
+          break;
+        case "discarded":
+          statusIcon =
+            '<span title="Discarded" class="tab-status-icon">🗑️</span>';
+          break;
+        case "inactive":
+          statusIcon =
+            // '<span title="Inactive" class="tab-status-icon">⏸️</span>';
+            statusIcon =
+              '<span title="Inactive" class="tab-status-icon">⚪</span>';
+            // statusIcon = '<span title="Inactive" class="tab-status-icon">🔕</span>';
+            // statusIcon = '<span title="Inactive" class="tab-status-icon">🛌</span>';
+          break;
+        case "pinned":
+          statusIcon =
+            '<span title="Pinned" class="tab-status-icon">📌</span>';
+          break;
         default:
           statusIcon =
             '<span title="Unknown" class="tab-status-icon">❔</span>';
