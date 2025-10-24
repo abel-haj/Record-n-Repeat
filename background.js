@@ -22,29 +22,40 @@ const ACTIONS = {
   // Incoming from extension popup
   chrome.runtime.onMessage.addListener(
     (message, sender, sendResponse) => {
-      console.log(
-        "Message received in background.js for tab:",
-        message.tab,
-        "with action:",
-        message.action
-      );
+      console.log("got a SIGNAL, what is it?", message);
 
       if (!message.action) return;
 
       // Send signal to content script
       // to start listening for and sending actions
       if (message.action === ACTIONS.RECORD && message.tab) {
+        console.log(
+          "RELAYING MESSAGE TO TAB WORKER TO START RECORDING"
+        );
+
         chrome.tabs.sendMessage(message.tab, {
           action: ACTIONS.RECORD,
         });
+      } else if (message.action === ACTIONS.RECORD) {
+        console.log(
+          "REFUSED TO RECORD: Missing required argument: Tab ID"
+        );
       }
 
       // Send signal to content script
       // to stop listening and cleaning up
       if (message.action === ACTIONS.STOP && message.tab) {
+        console.log(
+          "RELAYING MESSAGE TO TAB WORKER TO STOP RECORDING"
+        );
+
         chrome.tabs.sendMessage(message.tab, {
           action: ACTIONS.STOP,
         });
+      } else if (message.action === ACTIONS.STOP) {
+        console.log(
+          "REFUSED TO STOP RECORDING: Missing required argument: Tab ID"
+        );
       }
 
       if (message.action === "INFO_TABS") {
@@ -60,12 +71,17 @@ const ACTIONS = {
             active: true,
             currentWindow: true,
           });
-          console.log("📌 Step 4: DETAILS ABOUT CURRENT TAB:", currentTab);
+          console.log(
+            "📌 Step 4: DETAILS ABOUT CURRENT TAB:",
+            currentTab
+          );
 
           console.log("📤 Step 5: Sending tab data to popup...");
           // Send tab info back to popup
           if (sender.tab) {
-            console.log("📨 Sending via runtime message (from content script)");
+            console.log(
+              "📨 Sending via runtime message (from content script)"
+            );
             // If called from content script, send to popup
             chrome.runtime.sendMessage({
               action: "TABS_INFO_RESPONSE",
@@ -83,7 +99,7 @@ const ACTIONS = {
           }
           console.log("✅ Step 6: Tab data sent successfully!");
         })();
-        
+
         return true; // Keep message channel open for async response
       }
     }
@@ -94,27 +110,11 @@ const ACTIONS = {
     //
     if (port.name === "content-background") {
       // push new action
-      port.onMessage.addListener((newAction) => {
-        console.log("NEW ACTION RECORDED", newAction);
-
-        recordedActions.push(newAction);
-        chrome.storage.local.set({ recordedActions });
-      });
+      port.onMessage.addListener((newAction) => {});
 
       // abrupt disconnection
       // stop recording
-      port.onDisconnect.addListener((port) => {
-        console.log("DISCONNECTED", port);
-
-        isRecording = false;
-        recordedActions = [];
-        chrome.storage.local.set({ isRecording });
-
-        // update UI in popup
-        chrome.runtime.sendMessage({
-          action: ACTIONS.STOP,
-        });
-      });
+      port.onDisconnect.addListener((port) => {});
     }
   });
 })();

@@ -3,6 +3,7 @@ const ACTIONS = {
   STOP: "STOP_RECORDING",
   REPLAY: "REPLAY_RECORDING",
 };
+const l = console.log;
 
 // Update tabs table
 function updateTabsTable(allTabs, currentTab) {
@@ -262,7 +263,7 @@ function updateTabsTable(allTabs, currentTab) {
     }
   }
 
-  const testButtonClickHandler = async () => {
+  const infoButtonClickHandler = async () => {
     console.log("🔵 Step A: Test button clicked!");
     console.log("📡 Step B: SENDING SIGNAL FOR TESTING TABS");
 
@@ -316,97 +317,50 @@ function updateTabsTable(allTabs, currentTab) {
   document
     .getElementById("recordBtn")
     .addEventListener("click", async () => {
-      console.log("TRYING TO RECORD");
-
-      // flag as recording
-      isRecording = true;
-
-      // update state
-      recordedActions = [];
-      chrome.storage.local.set({ isRecording, recordedActions });
-
-      // send signal to listen for actions
+      l("EXTENSION IS TRYING TO RECORD");
+      // fetch the tab that is emitting action
       const [activeTab] = await chrome.tabs.query({
         active: true,
         currentWindow: true,
       });
-      // console.log('QUERY FROM CHROME API', activeTab);
+
+      // send event to background to signal record start
       chrome.runtime.sendMessage({
         tab: activeTab.id,
         action: ACTIONS.RECORD,
       });
+      // TODO: Get confirmation that recording started!
+      isRecording = true;
 
-      // update UI
+      // reflect ui as it is recording
       updateUI();
     });
 
   document
     .getElementById("stopBtn")
     .addEventListener("click", async () => {
-      console.log("STOPPING RECORD");
-
-      // flag as not recording
-      isRecording = false;
-
-      // update state
-      chrome.storage.local.set({ isRecording, recordedActions });
-
-      // send signal to stop listening for actions
+      l("🔴 EXTENSION IS TRYING TO STOP RECORDING");
+      // fetch the tab that is emitting action
       const [activeTab] = await chrome.tabs.query({
         active: true,
         currentWindow: true,
       });
-      console.log(
-        "CONTENT SCRIPT OF " +
-          activeTab.id +
-          " SHOULD START LISTENING"
-      );
+
+      // send event to background to signal record stop
       chrome.runtime.sendMessage({
         tab: activeTab.id,
         action: ACTIONS.STOP,
       });
+      // TODO: Get confirmation that recording ended!
+      isRecording = false;
 
-      // update UI
+      // reflect ui as it is recording
       updateUI();
     });
 
   document
     .getElementById("playBtn")
-    .addEventListener("click", async () => {
-      console.log("SIGNAL TO PLAY RECORDED ACTIONS");
-
-      // Set playing state
-      isPlaying = true;
-      updateUI();
-
-      // send signal to play recorded actions
-      const [activeTab] = await chrome.tabs.query({
-        active: true,
-        currentWindow: true,
-      });
-
-      try {
-        chrome.tabs
-          .sendMessage(activeTab.id, {
-            action: ACTIONS.REPLAY,
-            replay: recordedActions,
-          })
-          .then((response) => {
-            console.log("REPLAY RESPONSE:", response);
-
-            // Reset playing state after replay completes
-            setTimeout(() => {
-              isPlaying = false;
-              updateUI();
-            }, 1000); // Give some time for the replay to visually complete
-          });
-      } catch (error) {
-        console.error("Replay failed:", error);
-        // Reset playing state on error
-        isPlaying = false;
-        updateUI();
-      }
-    });
+    .addEventListener("click", async () => {});
 
   document
     .getElementById("clearBtn")
@@ -419,30 +373,12 @@ function updateTabsTable(allTabs, currentTab) {
 
   document
     .getElementById("testBtn")
-    .addEventListener("click", testButtonClickHandler);
+    .addEventListener("click", infoButtonClickHandler);
 
-  testButtonClickHandler();
+  infoButtonClickHandler();
 
   chrome.runtime.onMessage.addListener(
-    (message, sender, sendResponse) => {
-      console.log("📨 Popup received message:", message);
-
-      if (message.action === ACTIONS.STOP) {
-        console.log("🛑 RECORDING STOPPED MESSAGE RECEIVED");
-        isRecording = false;
-        chrome.storage.local.set({ isRecording });
-        updateUI();
-      } else if (message.action === "REPLAY_COMPLETE") {
-        console.log("🎬 REPLAY COMPLETED MESSAGE RECEIVED");
-        isPlaying = false;
-        updateUI();
-      } else if (message.action === "TABS_INFO_RESPONSE") {
-        console.log("📋 TABS INFO RESPONSE RECEIVED:", message);
-        console.log("🎨 Updating tabs table...");
-        updateTabsTable(message.allTabs, message.currentTab);
-        console.log("✅ Tabs table updated!");
-      }
-    }
+    (message, sender, sendResponse) => {}
   );
 
   // Add clear button functionality
